@@ -1,7 +1,5 @@
 const themeToggler = document.querySelector(".container .theme-toggler");
-const generatePromptBtn = document.querySelector(
-  ".container .input-message .generate-btn"
-);
+const generatePromptBtn = document.querySelector(".container .input-message .generate-btn");
 const promptForm = document.querySelector(".container .image-generator-form");
 const promptInput = document.querySelector(".container #message");
 const modelSelect = document.querySelector(".container #select-model");
@@ -9,8 +7,6 @@ const countSelect = document.querySelector(".container #select-count");
 const ratioSelect = document.querySelector(".container #select-ratio");
 const gridGallery = document.querySelector(".container .gallery-grid");
 const generateBtn = document.querySelector(".container .actions .generate-btn");
-
-const API_KEY = localStorage.getItem("hf_api_key") || "";
 
 const examplePrompts = [
   "A magic forest with glowing plants and fairy homes among giant mushrooms",
@@ -45,29 +41,23 @@ const examplePrompts = [
   "A castle made of clouds, shifting and changing shape in the sky",
 ];
 
+// Theme initialization
 (() => {
   const savedTheme = localStorage.getItem("theme");
-  const savedPrefersDark = window.matchMedia(
-    "(prefers-color-scheme: dark)"
-  ).matches;
-  const isDarkTheme =
-    savedTheme === "dark" || (!savedTheme && savedPrefersDark);
+  const savedPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDarkTheme = savedTheme === "dark" || (!savedTheme && savedPrefersDark);
   document.body.classList.toggle("dark-theme", isDarkTheme);
-  themeToggler.querySelector("img").setAttribute("src", "svgs/night.svg");
+  themeToggler.querySelector("img").setAttribute("src", isDarkTheme ? "svgs/night.svg" : "svgs/light.svg");
 })();
 
 const toggleTheme = () => {
   const isDarkTheme = document.body.classList.toggle("dark-theme");
-
   localStorage.setItem("theme", isDarkTheme ? "dark" : "light");
-
-  isDarkTheme
-    ? themeToggler.querySelector("img").setAttribute("src", "svgs/night.svg")
-    : themeToggler.querySelector("img").setAttribute("src", "svgs/light.svg");
+  themeToggler.querySelector("img").setAttribute("src", isDarkTheme ? "svgs/night.svg" : "svgs/light.svg");
 };
 
 const getImgDimension = (imgAspectRatio, baseSize = 512) => {
-  const [width, height] = imgAspectRatio.split("/").map(Number);
+  const [width, height] = (imgAspectRatio || "1/1").split("/").map(Number);
   const scaleFactor = baseSize / Math.sqrt(width * height);
 
   let newWidth = Math.floor(width * scaleFactor);
@@ -82,77 +72,54 @@ const getImgDimension = (imgAspectRatio, baseSize = 512) => {
 
 const updateImgCard = (imgIndex, imgUrl) => {
   const imgCard = document.getElementById(`img-card-${imgIndex}`);
-  const resultImg = imgCard.querySelector(".result-img");
-  const statusContainer = imgCard.querySelector(".status-container");
-
   if (!imgCard) return;
-  imgCard.classList.remove("loading");
+  
+  imgCard.classList.remove("loading", "error");
   imgCard.innerHTML = `<img src="${imgUrl}" class="result-img" alt="Generated Image" />
               <div class="img-overlay">
-                <a href="${imgUrl}" class="img-download-btn" type="button" download="${Date.now()}.png">
+                <a href="${imgUrl}" target="_blank" class="img-download-btn" type="button" download="ai-image-${Date.now()}.jpg">
                   <img src="svgs/download.svg" alt="Download" />
                 </a>
               </div>`;
 };
 
-const generateImages = async (
-  selectModel,
-  imgCount,
-  imgAspectRatio,
-  promptText
-) => {
+const mapModelToPollinations = (model) => {
+  if (model && model.includes("FLUX.1-schnell")) return "flux";
+  if (model && model.includes("FLUX.1-dev")) return "flux-realism";
+  if (model && model.includes("stable-diffusion-xl")) return "turbo";
+  if (model && model.includes("3.5-large")) return "flux-anime";
+  return "flux";
+};
+
+const generateImages = async (selectModel, imgCount, imgAspectRatio, promptText) => {
   const { width, height } = getImgDimension(imgAspectRatio);
   generateBtn.setAttribute("disabled", "true");
 
-  const imgPromises = Array.from({ length: imgCount }, async (_, i) => {
-    try {
-      let blob;
+  const pollinationsModel = mapModelToPollinations(selectModel);
+
+  const imgPromises = Array.from({ length: imgCount }, (_, i) => {
+    return new Promise((resolve) => {
       const seed = Math.floor(Math.random() * 1000000) + i;
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=${width}&height=${height}&seed=${seed}&nologo=true&model=${pollinationsModel}`;
 
-      if (API_KEY) {
-        try {
-          const MODEL_URL = `https://api-inference.huggingface.co/models/${selectModel}`;
-          const response = await fetch(MODEL_URL, {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${API_KEY}`,
-              "Content-Type": "application/json",
-              "x-use-cache": "false",
-            },
-            body: JSON.stringify({
-              inputs: promptText,
-              parameters: { width, height },
-            }),
-          });
-          if (response.ok) {
-            blob = await response.blob();
-          }
-        } catch (err) {
-          console.warn("HF API error, using free AI engine:", err);
+      const img = new Image();
+      img.onload = () => {
+        updateImgCard(i, imageUrl);
+        resolve();
+      };
+      img.onerror = () => {
+        const imgCard = document.getElementById(`img-card-${i}`);
+        if (imgCard) {
+          imgCard.classList.replace("loading", "error");
+          const statusText = imgCard.querySelector(".status-text");
+          if (statusText) statusText.textContent = "Error generating image";
+          const errImg = imgCard.querySelector("img[src='svgs/error.svg']");
+          if (errImg) errImg.style.display = "block";
         }
-      }
-
-      // High-speed free AI Image engine (no API key required)
-      if (!blob) {
-        const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
-        const response = await fetch(pollUrl);
-        if (!response.ok) throw new Error("Image generation failed");
-        blob = await response.blob();
-      }
-
-      const imgUrl = URL.createObjectURL(blob);
-      updateImgCard(i, imgUrl);
-    } catch (error) {
-      console.error("ERROR: ", error);
-      const imgCard = document.getElementById(`img-card-${i}`);
-      if (imgCard) {
-        imgCard.classList.replace("loading", "error");
-        const statusText = imgCard.querySelector(".status-text");
-        if (statusText) statusText.textContent = "Error generating image";
-        const errImg = imgCard.querySelector("img[src='svgs/error.svg']");
-        if (errImg) errImg.style.display = "block";
-      }
-    }
+        resolve();
+      };
+      img.src = imageUrl;
+    });
   });
 
   await Promise.allSettled(imgPromises);
@@ -165,7 +132,7 @@ const createImgCard = (selectModel, imgCount, imgAspectRatio, promptText) => {
     gridGallery.innerHTML += `<div class="img-card loading" id="img-card-${i}" style="aspect-ratio:${imgAspectRatio}">
             <div class="status-container">
               <div class="spinner"></div>
-              <img src="svgs/error.svg" alt="" />
+              <img src="svgs/error.svg" alt="" style="display:none;" />
               <div class="status-text">Generating...</div>
             </div>
             <img src="" class="result-img" alt="Generated Image" />
@@ -183,19 +150,16 @@ const handleFormSubmit = (e) => {
   const imgAspectRatio = ratioSelect.value || "1/1";
   const promptText = promptInput.value.trim();
 
-  console.log(selectModel, imgCount, imgAspectRatio, promptText);
+  if (!promptText) return;
+
   createImgCard(selectModel, imgCount, imgAspectRatio, promptText);
 };
 
 generatePromptBtn.addEventListener("click", () => {
-  const prompt =
-    examplePrompts[Math.floor(Math.random() * examplePrompts.length)];
-
-  console.log(prompt);
+  const prompt = examplePrompts[Math.floor(Math.random() * examplePrompts.length)];
   promptInput.value = prompt;
   promptInput.focus();
 });
 
 promptForm.addEventListener("submit", handleFormSubmit);
-
 themeToggler.addEventListener("click", toggleTheme);
