@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>AI Image Generator</title>
+  </head>
+  <body class="">
+    <div class="container">
+      <!-- <div class="top-border"></div> -->
+      <div class="main-container">
+        <div class="heading">
+          <div class="header-left">
+            <div class="logo"><img src="svgs/logo.svg" alt="logo" /></div>
+            <div class="header">AI Image Generator</div>
+          </div>
+          <div class="theme-toggler">
+            <img src="svgs/light.svg" alt="Theme Toggle" />
+          </div>
+        </div>
+
+        <form class="image-generator-form">
+          <div class="input-message">
+            <textarea
+              placeholder="Enter Your Prompt To Create Images"
+              name="message"
+              id="message"
+              required
+              autofocus
+            ></textarea>
+            <button type="button" class="generate-btn">
+              <img src="svgs/dice-solid.svg" alt="Randomize Prompt" />
+            </button>
+          </div>
+          <div class="actions">
+            <div class="select-wrapper">
+              <select
+                class="custom-select"
+                name="model"
+                required
+                id="select-model"
+              >
+                <option value="" selected disabled>Select Model</option>
+                <option value="black-forest-labs/FLUX.1-dev">FLUX.1-dev</option>
+                <option value="black-forest-labs/FLUX.1-schnell">
+                  FLUX.1-schnell
+                </option>
+                <option value="stabilityai/stable-diffusion-xl-base-1.0">
+                  Stable Diffusion XL
+                </option>
+                <option value="runwayml/stable-diffusion-v1-5">
+                  Stable Diffusion v1.5
+                </option>
+                <option value="stabilityai/stable-diffusion-3.5-large">Stable Diffusion 3.5 Large</option>
+              </select>
+            </div>
+
+            <div class="select-wrapper">
+              <select
+                class="custom-select"
+                name="image-count"
+                required
+                id="select-count"
+              >
+                <option value="" selected disabled>Image Count</option>
+                <option value="1">1 Image</option>
+                <option value="2">2 Images</option>
+                <option value="3">3 Images</option>
+                <option value="4">4 Images</option>
+              </select>
+            </div>
+
+            <div class="select-wrapper">
+              <select
+                class="custom-select"
+                name="aspect-ratio"
+                required
+                id="select-ratio"
+              >
+                <option value="" selected disabled>Aspect Ratio</option>
+                <option value="1/1">Square (1:1)</option>
+                <option value="16/9">Landscape (16:9)</option>
+                <option value="9/16">Portrait (9:16)</option>
+              </select>
+            </div>
+
+            <button class="generate-btn" type="submit">
+              <img src="svgs/generate.svg" alt="Generate Icon" />
+              Generate
+            </button>
+          </div>
+        </form>
+
+        <div class="gallery-grid">
+          <!-- <div class="img-card error">
+            <div class="status-container">
+              <div class="spinner"></div>
+              <img src="svgs/error.svg" alt="" />
+              <div class="status-text">Generating...</div>
+            </div>
+            <img src="" class="result-img" alt="Generated Image" />
+            <div class="img-overlay">
+              <button class="img-download-btn" type="button">
+                <img src="svgs/download.svg" alt="Download" />
+              </button>
+            </div>
+          </div>
+           -->
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
