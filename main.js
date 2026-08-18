@@ -178,7 +178,7 @@ const createImgCard = (selectModel, imgCount, imgAspectRatio, promptText) => {
 const handleFormSubmit = (e) => {
   e.preventDefault();
 
-  const selectModel = modelSelect.value;
+  const selectModel = modelSelect.value || "black-forest-labs/FLUX.1-schnell";
   const imgCount = parseInt(countSelect.value) || 1;
   const imgAspectRatio = ratioSelect.value || "1/1";
   const promptText = promptInput.value.trim();
