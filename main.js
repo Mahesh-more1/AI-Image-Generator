@@ -101,46 +101,57 @@ const generateImages = async (
   imgAspectRatio,
   promptText
 ) => {
-  const MODEL_URL = `https://api-inference.huggingface.co/models/${selectModel}`;
   const { width, height } = getImgDimension(imgAspectRatio);
   generateBtn.setAttribute("disabled", "true");
 
   const imgPromises = Array.from({ length: imgCount }, async (_, i) => {
     try {
-      const response = await fetch(MODEL_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${API_KEY}`,
-          "Content-Type": "application/json",
-          "x-use-cache": "false",
-        },
-        body: JSON.stringify({
-          inputs: promptText,
-          parameters: {
-            width,
-            height,
-          },
-        }),
-      });
+      let blob;
+      const seed = Math.floor(Math.random() * 1000000) + i;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API Error: ${errorText}`);
+      if (API_KEY) {
+        try {
+          const MODEL_URL = `https://api-inference.huggingface.co/models/${selectModel}`;
+          const response = await fetch(MODEL_URL, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${API_KEY}`,
+              "Content-Type": "application/json",
+              "x-use-cache": "false",
+            },
+            body: JSON.stringify({
+              inputs: promptText,
+              parameters: { width, height },
+            }),
+          });
+          if (response.ok) {
+            blob = await response.blob();
+          }
+        } catch (err) {
+          console.warn("HF API error, using free AI engine:", err);
+        }
       }
 
-      // Handle the response as a binary blob
-      const blob = await response.blob();
-      const imgUrl = URL.createObjectURL(blob);
+      // High-speed free AI Image engine (no API key required)
+      if (!blob) {
+        const pollUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptText)}?width=${width}&height=${height}&seed=${seed}&nologo=true`;
+        const response = await fetch(pollUrl);
+        if (!response.ok) throw new Error("Image generation failed");
+        blob = await response.blob();
+      }
 
+      const imgUrl = URL.createObjectURL(blob);
       updateImgCard(i, imgUrl);
     } catch (error) {
       console.error("ERROR: ", error);
       const imgCard = document.getElementById(`img-card-${i}`);
-      imgCard.classList.replace("loading", "error");
-      imgCard.querySelector(".status-text").textContent =
-        "Error generating image";
-      imgCard.querySelector("img[src='svgs/error.svg']").style.display =
-        "block";
+      if (imgCard) {
+        imgCard.classList.replace("loading", "error");
+        const statusText = imgCard.querySelector(".status-text");
+        if (statusText) statusText.textContent = "Error generating image";
+        const errImg = imgCard.querySelector("img[src='svgs/error.svg']");
+        if (errImg) errImg.style.display = "block";
+      }
     }
   });
 
